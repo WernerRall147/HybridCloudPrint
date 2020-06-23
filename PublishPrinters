@@ -1,10 +1,31 @@
-Function Azure {
+#Run the below Install Modules before using the Script. You will need internet access and access to Nuget Package Provider
+#Install-Module AzureRM
+#Install-Module AzureAD
+#Install-Module PublishCloudPrint
+
+#Required Parameter for Logging into Azure 
+Param (
+    [Parameter(Mandatory = $true)]
+    [string]
+    $AzureAccountName)
+
+#Required Module Import
+Import-Module PublishCloudPrinter
+
+#Required Connection to Azure Tenant
+Connect-AzureAD -AccountId $AzureAccountName
+
+#The Function that queries Subscription and Tenant Info
+Function AzureSub {
 # Sign in to Azure Subscription
+    
+    
+    
     while ((Get-AzureRmContext -ErrorAction SilentlyContinue).Account.Id -ne $AzureAccountName)
     {
         Write-Host "`r`nYou are not currently signed into Azure with the account name that you provided. Sign in with the appropriate account in order to continue." -ForegroundColor Green
         pause
-        Login-AzureRmAccount | Out-Null
+        Login-AzureRmAccount
     }
 
     $azTenantGuid = Get-AzureRmTenant
@@ -25,77 +46,85 @@ Function Azure {
                 Write-Host $azTenantGuid[$i-1].Directory -ForegroundColor Cyan
             }
             Write-Host "Enter a Number [1 - $($azTenantGuid.Count)]: " -ForegroundColor Green -NoNewline
-            $sel = Read-Host
-            $azTenantGuid[$sel - 1] | Set-AzureRmContext | Out-Null
+            $global:sel = Read-Host
+            $AzTEnantGuid[$sel - 1] | Set-AzureRmContext | Out-Null
         }
      }
-     
-     $CurrentContext = Get-AzureRmContext
-     $DirID = $CurrentContext.Tenant.Id
+}
 
+#Get the current context
+$CurrentContext = Get-AzureRmContext
+$DirID = $CurrentContext.Tenant.Id
 
+#The function that queries the Enterprise Mopria Discovery Service App
+Function AzureMCS {
 #Query the MCS App
-$azAppsMCS = Get-AzureADApplication -Top 100 #| Select DisplayName, Homepage
+$azAppsMCS = Get-AzureADApplication -Top 100 | Sort-Object -Property DisplayName
 
 if ($azAppsMCS.Count -gt 1)
         {
             Write-Host "`r`nYou need to select your DiscoveryEndpoint(normally ends in /mcs). Which one would you like to use?"
-            for ($i = 1; $i -le $azAppsMCS.Count; $i++)
+            for ($j = 1; $j -le $azAppsMCS.Count; $j++)
             {
-                Write-Host "$i)" -NoNewline -ForegroundColor Green
-                Write-Host " $($azAppsMCS[$($i-1)].DisplayName) - " -NoNewline -ForegroundColor White
-                Write-Host $azAppsMCS[$i-1].Homepage -ForegroundColor Cyan
+                Write-Host "$j)" -NoNewline -ForegroundColor Green
+                Write-Host " $($azAppsMCS[$($j-1)].DisplayName) - " -NoNewline -ForegroundColor White
+                Write-Host $azAppsMCS[$j-1].Homepage -ForegroundColor Cyan
             }
-            Write-Host "Enter a Number [1 - $($azAppsMCS.Count)]: " -ForegroundColor Green -NoNewline
-            $sel = Read-Host
-            $azSelAppMCS = $azAppsMCS[$sel - 1] 
-            $azSelAppMCSURL = $azSelAppMCS.Homepage
+            Write-Host "Enter a Number [1 - $($azAppsMCS.Count)]:" -ForegroundColor Green -NoNewline
+            $Global:sel2 = Read-Host 
+            $azSelAppMCS = $azAppsMCS[$sel2 - 1] 
+            $Global:azSelAppMCSURL = $azSelAppMCS.Homepage
         }
-     
+}
+
+#The function that queries the Enterprise Cloud Print App
+Function AzureECP {
 #Query the ECP App
-if ($azAppsMCS.Count -gt 1)
+$azAppsECP = Get-AzureADApplication -Top 100 | Sort-Object -Property DisplayName
+if ($azAppsECP.Count -gt 1)
         {
             Write-Host "`r`nYou need to select your EnterpriseCloudPrint(normally ends in /ecp). Which one would you like to use?"
-            for ($i = 1; $i -le $azAppsECP.Count; $i++)
+            for ($h = 1; $h -le $azAppsECP.Count; $h++)
             {
-                Write-Host "$i)" -NoNewline -ForegroundColor Green
-                Write-Host " $($azAppsMCS[$($i-1)].DisplayName) - " -NoNewline -ForegroundColor White
-                Write-Host $azAppsMCS[$i-1].Homepage -ForegroundColor Cyan
+                Write-Host "$h)" -NoNewline -ForegroundColor Green
+                Write-Host " $($azAppsECP[$($h-1)].DisplayName) - " -NoNewline -ForegroundColor White
+                Write-Host $azAppsECP[$h-1].Homepage -ForegroundColor Cyan
             }
-            Write-Host "Enter a Number [1 - $($azAppsMCS.Count)]: " -ForegroundColor Green -NoNewline
-            $sel2 = Read-Host
-            $azSelAppECP = $azAppsMCS[$sel2 - 1] 
-            $azSelAppECPURL = $azSelAppECP.Homepage
-        }  
- 
+            Write-Host "Enter a Number [1 - $($azAppsECP.Count)]:" -ForegroundColor Green -NoNewline
+            $Global:sel3 = Read-Host 
+            $azSelAppECP = $azAppsECP[$sel3 - 1] 
+            $Global:azSelAppECPURL = $azSelAppECP.Homepage
+
+        }
+}
+
+#The function that Queries the Native App
+Function AzureNAT {
  #Query the Native App
- if ($azAppsMCS.Count -gt 1)
+ $azAppsNAT = Get-AzureADApplication -Top 100 | Sort-Object -Property DisplayName
+ if ($azAppsNAT.Count -gt 1)
         {
             Write-Host "`r`nYou need to select your Native App. Which one would you like to use?"
-            for ($i = 1; $i -le $azAppsECP.Count; $i++)
+            for ($k = 1; $k -le $azAppsNAT.Count; $k++)
             {
-                Write-Host "$i)" -NoNewline -ForegroundColor Green
-                Write-Host " $($azAppsMCS[$($i-1)].DisplayName) - " -NoNewline -ForegroundColor White
-                Write-Host $azAppsMCS[$i-1].Homepage -ForegroundColor Cyan
+                Write-Host "$k)" -NoNewline -ForegroundColor Green
+                Write-Host " $($azAppsNAT[$($k-1)].DisplayName) - " -NoNewline -ForegroundColor White
+                Write-Host $azAppsNAT[$k-1].Homepage -ForegroundColor Cyan
             }
-            Write-Host "Enter a Number [1 - $($azAppsMCS.Count)]: " -ForegroundColor Green -NoNewline
-            $sel3 = Read-Host
-            $azSelAppNAT = $azAppsMCS[$sel3 - 1] 
-            $azSelAppNATID = $azSelAppNAT.AppID
+            Write-Host "Enter a Number [1 - $($azAppsMCS.Count)]:" -ForegroundColor Green -NoNewline
+            $Global:sel4 = Read-Host 
+            $azSelAppNAT = $azAppsNAT[$sel4 - 1] 
+            $Global:azSelAppNATID = $azSelAppNAT.AppID
         }      
-     
-     
      }
 
-
+#Publish a Cloud Printer
 Function PublishPrinter {
 
-#Import Required Module
-Import-Module PublishCloudPrinter
 
 #Variables
 
-$PrinterName = Write-Host "Please enter the Printer Name"  
+$PrinterName = Read-Host "Please enter the Printer Name"  
 $PrinterMan = Read-Host -Prompt "Please enter the Printer Manufacturer"
 $PrinterMod = Read-Host -Prompt "Please enter the Printer Model"
 $Country = Read-Host -Prompt "Please enter the Country this Printer will be avilable in"
@@ -122,11 +151,7 @@ Publish-CloudPrinter -Printer $PrinterName `
 
 }
 
-#query a Printer and verify its published
-
-#Import Required Module
-Import-Module PublishCloudPrinter
-
+#Query a Printer and verify its published
 Function QueryPrinter {
 
 Publish-CloudPrinter -Query `
@@ -138,14 +163,13 @@ Publish-CloudPrinter -Query `
 }
 
 #Unpublish the Printer
-
 Function UnpublishPrinter {
 
 #Import Required Module
-Import-Module PublishCloudPrinter
+#Import-Module PublishCloudPrinter
 
 #Variables
-$PrinterName = Write-Host "Please enter the Printer Name"  
+$PrinterName = Read-Host "Please enter the Printer Name"  
 $PrinterMan = Read-Host -Prompt "Please enter the Printer Manufacturer"
 $PrinterMod = Read-Host -Prompt "Please enter the Printer Model"
 $Country = Read-Host -Prompt "Please enter the Country this Printer will be avilable in"
@@ -171,8 +195,8 @@ Publish-CloudPrinter -Unpublish -Printer $PrinterName `
 
 }
 
-function Show-Menu
-{
+#Function to Create the Cloud Print Options Menu
+function Show-Menu{
      param (
            [string]$Title = 'Hybrid Cloud Print Options'
      )
@@ -185,8 +209,8 @@ function Show-Menu
      Write-Host "Q: Press 'Ctrl-C' to quit."
 }
 
-Function Main()
-{
+#Function to Select the Cloud Print Options
+Function Main(){
      Show-Menu
      $input = Read-Host "Please make a selection"
      switch ($input)
@@ -207,5 +231,9 @@ Function Main()
      pause
 }
 
-Azure
+#Execute all the functions in order
+AzureSub
+AzureMCS
+AzureECP
+AzureNAT
 Main

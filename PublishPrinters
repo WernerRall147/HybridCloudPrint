@@ -1,7 +1,7 @@
 #Run the below Install Modules before using the Script. You will need internet access and access to Nuget Package Provider
 #Install-Module AzureRM
 #Install-Module AzureAD
-#Install-Module PublishCloudPrint
+#Install-Module PublishCloudPrinter
 
 #Required Parameter for Logging into Azure 
 Param (

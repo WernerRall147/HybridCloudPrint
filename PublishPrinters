@@ -54,7 +54,7 @@ Function AzureSub {
 
 #Get the current context
 $CurrentContext = Get-AzureRmContext
-$DirID = $CurrentContext.Tenant.Id
+$Global:DirID = $CurrentContext.Tenant.Id
 
 #The function that queries the Enterprise Mopria Discovery Service App
 Function AzureMCS {
